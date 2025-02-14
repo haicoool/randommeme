@@ -7,14 +7,17 @@ function getMultipleMemes($count = 5)
     $response = file_get_contents($apiUrl);
     $memeData = json_decode($response, true);
 
-    return isset($memeData['memes']) ? $memeData['memes'] : [];
+    if (isset($memeData['memes'])) {
+        return $memeData['memes']; // Returns an array of meme details
+    }
+    return [];
 }
 
 if (!isset($_SESSION['shownMemes'])) {
     $_SESSION['shownMemes'] = [];
 }
 
-// Get a unique meme that hasn't been shown
+// Get a unique meme
 function getUniqueMeme()
 {
     $maxTries = 10;
@@ -27,7 +30,6 @@ function getUniqueMeme()
             if (!in_array($meme['url'], $_SESSION['shownMemes'])) {
                 $_SESSION['shownMemes'][] = $meme['url'];
 
-                // Keep session array small
                 if (count($_SESSION['shownMemes']) > 50) {
                     array_shift($_SESSION['shownMemes']);
                 }
@@ -38,10 +40,10 @@ function getUniqueMeme()
                 ];
             }
         }
+
         $tries++;
     }
 
-    // If all tries fail, return a random meme from the last batch
     return [
         'url' => $memes[array_rand($memes)]['url'],
         'subreddit' => $memes[array_rand($memes)]['subreddit']
@@ -53,7 +55,7 @@ if (isset($_GET['next'])) {
     $meme = getUniqueMeme();
     $_SESSION['memeUrl'] = $meme['url'];
     $_SESSION['memeSubreddit'] = $meme['subreddit'];
-    header("Location: index.php"); // ✅ Fixed redirect
+    header("Location: index.php");
     exit();
 }
 
@@ -65,20 +67,7 @@ if (!isset($_SESSION['memeUrl']) || !isset($_SESSION['memeSubreddit'])) {
 }
 
 $memeUrl = $_SESSION['memeUrl'];
-$memeSubreddit = $_SESSION['memeSubreddit'] ?? 'Unknown';
-
-// Handle Download Meme
-if (isset($_GET['download'])) {
-    $imgData = file_get_contents($memeUrl);
-    $filename = "meme_" . time() . ".jpg";
-    file_put_contents($filename, $imgData);
-
-    header('Content-Type: image/jpeg');
-    header('Content-Disposition: attachment; filename="' . $filename . '"');
-    readfile($filename);
-    unlink($filename);
-    exit;
-}
+$memeSubreddit = $_SESSION['memeSubreddit'] ?? 'Unknown'; // Prevent undefined warning
 ?>
 
 <!DOCTYPE html>
@@ -88,8 +77,6 @@ if (isset($_GET['download'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>😂 Meme Generator</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
-
         body {
             font-family: 'Poppins', sans-serif;
             background-color: #121212;
@@ -109,7 +96,7 @@ if (isset($_GET['download'])) {
             box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
             text-align: center;
             max-width: 500px;
-            width: 90vw; /* ✅ Improved for mobile */
+            width: 100%;
         }
 
         h2 {
@@ -182,10 +169,15 @@ if (isset($_GET['download'])) {
             background: #218838;
         }
 
+        .created-by {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #bbb;
+        }
+
         @media (max-width: 480px) {
             .container {
-                width: 95vw; /* ✅ Adjusted for mobile */
-                padding: 15px;
+                width: 100%;
             }
 
             h2 {
@@ -209,8 +201,8 @@ if (isset($_GET['download'])) {
         <p class="subreddit">Source: <a href="https://www.reddit.com/r/<?= $memeSubreddit ?>" target="_blank">r/<?= $memeSubreddit ?></a></p>
         <div class="buttons">
             <a href="?next=1"><button class="next-btn">Next Meme 🔄</button></a>
-            <a href="?download=1"><button class="download-btn">Download Meme ⬇️</button></a>
         </div>
+        <p class="created-by">Created by Haiqal</p>
     </div>
 
 </body>
